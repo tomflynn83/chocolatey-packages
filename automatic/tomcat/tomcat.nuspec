@@ -4,7 +4,7 @@
   <metadata>
     <!-- == PACKAGE SPECIFIC SECTION == -->
     <id>tomcat</id>
-    <version>9.0.82</version>
+    <version>9.0.89</version>
     <packageSourceUrl>https://github.com/tomflynn83/chocolatey-packages/tree/master/automatic/tomcat</packageSourceUrl>
     <owners>tomflynn83</owners>
     <!-- ============================== -->
