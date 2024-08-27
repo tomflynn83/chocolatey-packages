@@ -1,66 +1,50 @@
 ﻿$ErrorActionPreference = 'Stop'
 
-# Define URLs
 $releaseTagsUrl = 'https://api.github.com/repos/apache/tomcat/git/refs/tags'
 $baseUrl = 'https://archive.apache.org/dist/tomcat'
 $preReleaseSuffix = '-M\d+$'
 $UrlFormat = "{0}/tomcat-{1}/v{2}/bin/apache-tomcat-{2}-windows-{3}.zip{4}"
 
 function global:au_GetLatest {
-    param ()
+    $tags = Invoke-RestMethod -Uri $releaseTagsUrl
+    # Strip out any pre-release versions
+    $tags = $tags.where{$_.ref -NotMatch $preReleaseSuffix}
+    $i = 0
+    $versionValid = $false
+    $versionInfo = @{}
 
-    $headers = @{}
-    $pat = $Env:github_api_key
-    if ($pat) {
-        $headers.Add("Authorization", "token $pat")
-    }
+    # Find the most up to date version that is not a pre-release version
+    do {
+        $i++
+        $tagNum = $i * -1
+        $version = $tags[$tagNum].ref.Substring(10) # last tag; remove prefix "refs/tags/"
+        $majorVersion = $version.Split(".") | Select-Object -First 1
 
-    try {
-        $tags = Invoke-RestMethod -Uri $releaseTagsUrl -Headers $headers
-        # Strip out any pre-release versions
-        $tags = $tags.where{$_.ref -NotMatch $preReleaseSuffix}
-        $i = 0
-        $versionValid = $false
-        $versionInfo = @{}
+        $checksum32Url = $UrlFormat -f $baseUrl, $majorVersion, $version, 'x86', '.sha512'
+        $checksum64Url = $UrlFormat -f $baseUrl, $majorVersion, $version, 'x64', '.sha512'
+        $zip32Url = $UrlFormat -f $baseUrl, $majorVersion, $version, 'x86', ''
+        $zip64Url = $UrlFormat -f $baseUrl, $majorVersion, $version, 'x64', ''
 
-        # Find the most up to date version that is not a pre-release version
-        do {
-            $i++
-            $tagNum = $i * -1
-            $version = $tags[$tagNum].ref.Substring(10) # last tag; remove prefix "refs/tags/"
-            $majorVersion = $version.Split(".") | Select-Object -First 1
+        If ($majorVersion -eq 9) {
+            # Ensure that the version has biniaries
+            $versionValid = au_TestVersionExists -checksumUrl $checksum32Url
 
-            $checksum32Url = $UrlFormat -f $baseUrl, $majorVersion, $version, 'x86', '.sha512'
-            $checksum64Url = $UrlFormat -f $baseUrl, $majorVersion, $version, 'x64', '.sha512'
-            $zip32Url = $UrlFormat -f $baseUrl, $majorVersion, $version, 'x86', ''
-            $zip64Url = $UrlFormat -f $baseUrl, $majorVersion, $version, 'x64', ''
-
-            If ($majorVersion -eq 9) {
-                # Ensure that the version has binaries
-                $versionValid = au_TestVersionExists -checksumUrl $checksum32Url
-
-                If ($versionValid) {
-                    $versionInfo = @{
-                        Version = $version
-                        MajorVersion = $majorVersion
-                        URL32 = $zip32Url
-                        Checksum32Url = $checksum32Url
-                        ChecksumType32 = 'sha512'
-                        URL64 = $zip64Url
-                        Checksum64Url = $checksum64Url
-                        ChecksumType64 = 'sha512'
-                    }
+            If ($versionValid) {
+                $versionInfo = @{
+                    Version = $version
+                    MajorVersion = $majorVersion
+                    URL32 = $zip32Url
+                    Checksum32Url = $checksum32Url
+                    ChecksumType32 = 'sha512'
+                    URL64 = $zip64Url
+                    Checksum64Url = $checksum64Url
+                    ChecksumType64 = 'sha512'
                 }
             }
-        } while (-Not $versionValid)
+        }
+    } while (-Not $versionValid)
 
-        Write-Host "Debug: Latest Version Info: $($versionInfo | ConvertTo-Json)"
-
-        return $versionInfo
-    } catch {
-        Write-Warning "Failed to fetch tags from GitHub: $_"
-        return $null
-    }
+    return $versionInfo
 }
 
 function au_TestVersionExists($checksumUrl) {
@@ -69,10 +53,6 @@ function au_TestVersionExists($checksumUrl) {
     try {
         # First we create the request.
         $HTTP_Request = [System.Net.WebRequest]::Create($checksumUrl)
-        $pat = $Env:github_api_key
-        if ($pat) {
-            $HTTP_Request.Headers.Add("Authorization", "token $pat")
-        }
 
         # We then get a response from the site.
         $HTTP_Response = $HTTP_Request.GetResponse()
@@ -97,15 +77,6 @@ function au_TestVersionExists($checksumUrl) {
 function global:au_BeforeUpdate { Get-RemoteFiles -Purge -NoSuffix -Algorithm sha512 }
 
 function global:au_SearchReplace {
-    param (
-        [Hashtable]$Latest
-    )
-
-    if (-not $Latest) {
-        Write-Warning "No valid version information found."
-        return
-    }
-
     $filename32 = Split-Path -Path $Latest.URL32 -Leaf
     $filename64 = Split-Path -Path $Latest.URL64 -Leaf
     $folderName = "apache-tomcat-{0}" -f $Latest.Version
@@ -127,12 +98,4 @@ function global:au_SearchReplace {
     }
 }
 
-# Invoke au_GetLatest function with the optional PAT
-$latestInfo = au_GetLatest
-
-if ($latestInfo) {
-    # Update the package if latest version info is fetched
-    Update-Package -ChecksumFor none
-} else {
-    Write-Warning "Skipping package update due to failed fetch of latest version."
-}
+Update-Package -ChecksumFor none
