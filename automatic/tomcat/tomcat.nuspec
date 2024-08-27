@@ -4,16 +4,16 @@
   <metadata>
     <!-- == PACKAGE SPECIFIC SECTION == -->
     <id>tomcat</id>
-    <version>9.0.82</version>
-    <packageSourceUrl>https://github.com/tomflynn83/chocolatey-packages/tree/master/automatic/tomcat</packageSourceUrl>
-    <owners>tomflynn83</owners>
+    <version>9.0.93</version>
+    <packageSourceUrl>https://github.com/nicoske/chocolatey-packages/tree/master/automatic/tomcat</packageSourceUrl>
+    <owners>nicoske</owners>
     <!-- ============================== -->
 
     <!-- == SOFTWARE SPECIFIC SECTION == -->
     <title>Apache Tomcat</title>
     <authors>Apache Software Foundation</authors>
     <projectUrl>https://tomcat.apache.org</projectUrl>
-    <iconUrl>https://cdn.statically.io/gh/tomflynn83/chocolatey-packages/0f691446/icons/tomcat.png</iconUrl>
+    <iconUrl>https://cdn.statically.io/gh/nicoske/chocolatey-packages/0f691446/icons/tomcat.png</iconUrl>
     <copyright>Copyright © 1999-2019, The Apache Software Foundation</copyright>
     <licenseUrl>https://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
