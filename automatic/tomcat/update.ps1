@@ -1,19 +1,16 @@
 ﻿$ErrorActionPreference = 'Stop'
 
-# Optionally read GitHub PAT from environment variable
-$pat = $env:GITHUB_PAT
-
+# Define URLs
 $releaseTagsUrl = 'https://api.github.com/repos/apache/tomcat/git/refs/tags'
 $baseUrl = 'https://archive.apache.org/dist/tomcat'
 $preReleaseSuffix = '-M\d+$'
 $UrlFormat = "{0}/tomcat-{1}/v{2}/bin/apache-tomcat-{2}-windows-{3}.zip{4}"
 
 function global:au_GetLatest {
-    param (
-        [string]$pat
-    )
+    param ()
 
     $headers = @{}
+    $pat = $Env:github_api_key
     if ($pat) {
         $headers.Add("Authorization", "token $pat")
     }
@@ -57,6 +54,8 @@ function global:au_GetLatest {
             }
         } while (-Not $versionValid)
 
+        Write-Host "Debug: Latest Version Info: $($versionInfo | ConvertTo-Json)"
+
         return $versionInfo
     } catch {
         Write-Warning "Failed to fetch tags from GitHub: $_"
@@ -70,6 +69,7 @@ function au_TestVersionExists($checksumUrl) {
     try {
         # First we create the request.
         $HTTP_Request = [System.Net.WebRequest]::Create($checksumUrl)
+        $pat = $Env:github_api_key
         if ($pat) {
             $HTTP_Request.Headers.Add("Authorization", "token $pat")
         }
@@ -128,7 +128,7 @@ function global:au_SearchReplace {
 }
 
 # Invoke au_GetLatest function with the optional PAT
-$latestInfo = au_GetLatest -pat $pat
+$latestInfo = au_GetLatest
 
 if ($latestInfo) {
     # Update the package if latest version info is fetched
